@@ -67,17 +67,12 @@ export default function TransactionDetailScreen() {
                 />
               </View>
               <View>
-                <Text style={[styles.text, styles.merchantName]}>
-                  {transaction.merchant}
-                </Text>
-                <Text style={[styles.text, styles.category]}>
-                  {transaction.category}
-                </Text>
+                <Text style={styles.merchantName}>{transaction.merchant}</Text>
+                <Text style={styles.category}>{transaction.category}</Text>
               </View>
             </View>
             <Text
               style={[
-                styles.text,
                 styles.amount,
                 transaction.type === 'debit'
                   ? styles.debitAmount
@@ -119,12 +114,12 @@ export default function TransactionDetailScreen() {
             <DetailRow
               label='Status'
               value='Completed'
-              valueStyle={[styles.text, styles.statusCompleted]}
+              valueStyle={styles.statusCompleted}
             />
             <DetailRow
               label='Transaction ID'
               value={transaction.id}
-              valueStyle={[styles.text, styles.transactionId]}
+              valueStyle={styles.transactionId}
             />
           </View>
         </View>
@@ -155,8 +150,8 @@ function DetailRow({
 }) {
   return (
     <View style={styles.detailRow}>
-      <Text style={[styles.text, styles.detailLabel]}>{label}</Text>
-      <Text style={[styles.text, styles.detailValue, valueStyle]}>{value}</Text>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={[styles.detailValue, valueStyle]}>{value}</Text>
     </View>
   );
 }
@@ -197,10 +192,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  text: {
-    fontFamily: 'Satoshi',
-  },
+
   loadingText: {
+    fontFamily: 'Satoshi',
     fontSize: 16,
     color: '#666',
   },
@@ -237,16 +231,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   merchantName: {
+    fontFamily: 'Satoshi',
     fontSize: 18,
-
     fontWeight: '600',
     marginBottom: 4,
   },
   category: {
+    fontFamily: 'Satoshi',
     fontSize: 14,
     color: '#666',
   },
   amount: {
+    fontFamily: 'Satoshi',
     fontSize: 20,
     fontWeight: '600',
   },
@@ -270,18 +266,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailLabel: {
+    fontFamily: 'Satoshi',
     fontSize: 14,
     color: '#666',
   },
   detailValue: {
+    fontFamily: 'Satoshi',
     fontSize: 14,
     color: '#000',
     fontWeight: '500',
   },
   statusCompleted: {
+    fontFamily: 'Satoshi',
     color: '#34C759',
   },
   transactionId: {
+    fontFamily: 'Satoshi',
     fontSize: 12,
     color: '#999',
   },

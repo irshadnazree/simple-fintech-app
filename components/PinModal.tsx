@@ -7,6 +7,7 @@ interface PinModalProps {
   onClose: () => void;
   onVerify: (pin: string) => void;
   error: string | null;
+  isCreatingPin?: boolean;
 }
 
 export default function PinModal({
@@ -14,18 +15,52 @@ export default function PinModal({
   onClose,
   onVerify,
   error,
+  isCreatingPin = false,
 }: PinModalProps) {
   const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [step, setStep] = useState<'enter' | 'confirm'>('enter');
 
   const handleVerify = () => {
-    onVerify(pin);
-    setPin('');
+    if (isCreatingPin) {
+      if (step === 'enter') {
+        setStep('confirm');
+        return;
+      }
+      if (pin === confirmPin) {
+        onVerify(pin);
+        resetState();
+      } else {
+        setConfirmPin('');
+        setStep('enter');
+      }
+    } else {
+      onVerify(pin);
+      resetState();
+    }
   };
 
   const handleClose = () => {
-    setPin('');
+    resetState();
     onClose();
   };
+
+  const resetState = () => {
+    setPin('');
+    setConfirmPin('');
+    setStep('enter');
+  };
+
+  const getTitle = () => {
+    if (isCreatingPin) {
+      return step === 'enter' ? 'Create PIN' : 'Confirm PIN';
+    }
+    return 'Enter PIN';
+  };
+
+  const currentPin = isCreatingPin && step === 'confirm' ? confirmPin : pin;
+  const setCurrentPin =
+    isCreatingPin && step === 'confirm' ? setConfirmPin : setPin;
 
   return (
     <Modal
@@ -36,11 +71,11 @@ export default function PinModal({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Enter PIN</Text>
+          <Text style={styles.modalTitle}>{getTitle()}</Text>
           <TextInput
             style={styles.pinInput}
-            value={pin}
-            onChangeText={setPin}
+            value={currentPin}
+            onChangeText={setCurrentPin}
             keyboardType='numeric'
             secureTextEntry
             maxLength={4}
@@ -50,7 +85,12 @@ export default function PinModal({
           {error && <Text style={styles.errorText}>{error}</Text>}
           <View style={styles.modalButtons}>
             <Button title='Cancel' onPress={handleClose} color='lightGray' />
-            <Button title='Confirm' onPress={handleVerify} color='blue' />
+            <Button
+              title={isCreatingPin && step === 'enter' ? 'Next' : 'Confirm'}
+              onPress={handleVerify}
+              color='blue'
+              disabled={currentPin.length !== 4}
+            />
           </View>
         </View>
       </View>

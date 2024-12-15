@@ -43,7 +43,9 @@ export default function Button({
           }
         />
       ) : (
-        <Text style={[styles.text, styles[`${color}Button`]]}>{title}</Text>
+        <Text style={[styles.buttonText, styles[`${color}Button`]]}>
+          {title}
+        </Text>
       )}
     </TouchableOpacity>
   );
@@ -57,7 +59,7 @@ const styles = StyleSheet.create({
     padding: 16,
     width: '100%',
   },
-  text: {
+  buttonText: {
     color: '#F7FAFC',
     fontFamily: 'Satoshi',
     fontSize: 16,
