@@ -9,8 +9,8 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded] = useFonts({
-    SatoshiRegular: require('../assets/fonts/Satoshi-Regular.ttf'),
-    SatoshiBold: require('../assets/fonts/Satoshi-Bold.ttf'),
+    Satoshi: require('../assets/fonts/Satoshi-Variable.ttf'),
+    ClashDisplay: require('../assets/fonts/ClashDisplay-Variable.ttf'),
   });
 
   useEffect(() => {
@@ -18,5 +18,5 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
-  return <Stack />;
+  return <Stack screenOptions={{ headerShown: false }} />;
 }
