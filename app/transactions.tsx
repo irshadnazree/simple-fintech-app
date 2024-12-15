@@ -279,7 +279,12 @@ export default function TransactionsScreen() {
           <View key={date}>
             <Text style={styles.dateHeader}>{date}</Text>
             {transactions.map((transaction, index) => (
-              <View key={index} style={styles.transactionItem}>
+              <TouchableOpacity
+                key={index}
+                style={styles.transactionItem}
+                onPress={() => router.push(`/transaction/${transaction.id}`)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.transactionInfo}>
                   <Text style={styles.transactionText}>
                     You spent{' '}
@@ -297,7 +302,8 @@ export default function TransactionsScreen() {
                   </Text>
                   <Text style={styles.methodText}>{transaction.category}</Text>
                 </View>
-              </View>
+                <Ionicons name='chevron-forward' size={20} color='#999' />
+              </TouchableOpacity>
             ))}
           </View>
         ))}

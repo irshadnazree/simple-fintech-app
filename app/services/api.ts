@@ -19,6 +19,13 @@ interface BalanceResponse {
   currency: string;
 }
 
+interface TransactionDetailResponse {
+  transaction: Transaction;
+}
+
+// In-memory storage for transactions
+let cachedTransactions: Transaction[] = [];
+
 // Simulated API error
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -72,25 +79,24 @@ export const api = {
     } = {}
   ): Promise<ApiResponse<TransactionsResponse>> {
     try {
-      // Simulate network delay
       await simulateDelay();
-
-      // Simulate random errors
       simulateError();
-      // Import mock data generator
-      const { generateMockTransactions } = require('../utils/transactionUtils');
 
-      // Generate mock transactions based on the limit parameter
+      const { generateMockTransactions } = require('../utils/transactionUtils');
       const limit = params.limit || 20;
-      const transactions = generateMockTransactions(limit);
+
+      // Generate new transactions only if cache is empty
+      if (cachedTransactions.length === 0) {
+        cachedTransactions = generateMockTransactions(limit);
+      }
 
       // Simulate pagination
-      const hasMore = transactions.length >= limit;
+      const hasMore = cachedTransactions.length >= limit;
       const nextCursor = hasMore ? `cursor_${Date.now()}` : undefined;
 
       return {
         data: {
-          transactions,
+          transactions: cachedTransactions,
           hasMore,
           nextCursor,
         },
@@ -133,11 +139,12 @@ export const api = {
       simulateError();
 
       const { generateMockTransactions } = require('../utils/transactionUtils');
-      const transactions = generateMockTransactions(20);
+      // Update cached transactions
+      cachedTransactions = generateMockTransactions(20);
 
       return {
         data: {
-          transactions,
+          transactions: cachedTransactions,
           hasMore: true,
           nextCursor: `cursor_${Date.now()}`,
         },
@@ -149,6 +156,34 @@ export const api = {
         throw error;
       }
       throw new ApiError(500, 'Failed to refresh transactions');
+    }
+  },
+
+  async getTransactionDetail(
+    id: string
+  ): Promise<ApiResponse<TransactionDetailResponse>> {
+    try {
+      await simulateDelay(150, 550);
+
+      // Find the transaction in the cached list
+      const transaction = cachedTransactions.find((t) => t.id === id);
+
+      if (!transaction) {
+        throw new ApiError(404, 'Transaction not found');
+      }
+
+      return {
+        data: {
+          transaction,
+        },
+        status: 200,
+        message: 'Success',
+      };
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(500, 'Failed to fetch transaction details');
     }
   },
 };
