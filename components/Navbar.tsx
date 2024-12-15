@@ -46,9 +46,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   container: {
-    height: 60,
+    minHeight: 60,
     backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
+    paddingHorizontal: 48,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -59,5 +59,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 1,
     textAlign: 'center',
+    lineHeight: 32,
   },
 });

@@ -56,8 +56,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     width: '100%',
+    minHeight: 56,
   },
   buttonText: {
     color: '#F7FAFC',
@@ -65,6 +67,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.5,
+    lineHeight: 24,
   },
   blueButton: {
     backgroundColor: '#1A5EE6',
