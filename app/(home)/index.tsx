@@ -1,10 +1,10 @@
+import Button from '@/components/Button';
+import Navbar from '@/components/Navbar';
 import { useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, Text, View } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Button from './components/Button';
-import Navbar from './components/Navbar';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -27,7 +27,7 @@ export default function Index() {
             <Button
               title='Get Started'
               onPress={() => {
-                router.push('/transactions');
+                router.push('/transaction');
               }}
             />
           </View>

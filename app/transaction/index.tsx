@@ -1,3 +1,14 @@
+import { api, ApiError } from '@/api/api';
+import ErrorPlaceholder from '@/components/ErrorPlaceholder';
+import Navbar from '@/components/Navbar';
+import {
+  groupTransactionsByDate,
+  maskAmount,
+  maskMerchant,
+  revealAmount,
+  revealMerchant,
+  Transaction,
+} from '@/utils/transactionUtils';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
@@ -14,17 +25,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import ErrorPlaceholder from './components/ErrorPlaceholder';
-import Navbar from './components/Navbar';
-import { api, ApiError } from './services/api';
-import {
-  groupTransactionsByDate,
-  maskAmount,
-  maskMerchant,
-  revealAmount,
-  revealMerchant,
-  Transaction,
-} from './utils/transactionUtils';
 
 interface AccountBalance {
   available: number;

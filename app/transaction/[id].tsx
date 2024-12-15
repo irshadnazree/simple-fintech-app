@@ -1,11 +1,11 @@
+import { api, ApiError } from '@/api/api';
+import ErrorPlaceholder from '@/components/ErrorPlaceholder';
+import Navbar from '@/components/Navbar';
+import { Transaction } from '@/utils/transactionUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import ErrorPlaceholder from '../components/ErrorPlaceholder';
-import Navbar from '../components/Navbar';
-import { api, ApiError } from '../services/api';
-import { Transaction } from '../utils/transactionUtils';
 
 export default function TransactionDetailScreen() {
   const router = useRouter();
