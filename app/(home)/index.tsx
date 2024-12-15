@@ -5,7 +5,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -21,28 +21,10 @@ export default function Index() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [isCreatingPin, setIsCreatingPin] = useState(false);
 
-  useEffect(() => {
-    checkExistingPin();
-  }, []);
-
-  async function checkExistingPin() {
-    try {
-      const storedPin = await SecureStore.getItemAsync(PIN_KEY);
-      const needsPin = !storedPin;
-      setIsCreatingPin(needsPin);
-      if (needsPin) {
-        setShowPinModal(true);
-      }
-    } catch (error) {
-      console.error('Error checking PIN:', error);
-      setIsCreatingPin(true);
-      setShowPinModal(true);
-    }
-  }
-
   async function handleGetStarted() {
     try {
       const storedPin = await SecureStore.getItemAsync(PIN_KEY);
+
       if (!storedPin) {
         setIsCreatingPin(true);
         setShowPinModal(true);
@@ -54,6 +36,7 @@ export default function Index() {
 
       if (!hasHardware || !isEnrolled) {
         // Show PIN modal if biometric is not available
+        setIsCreatingPin(false);
         setShowPinModal(true);
         return;
       }
@@ -67,6 +50,7 @@ export default function Index() {
         router.push('/transaction');
       } else if (result.error === 'user_cancel') {
         // Show PIN modal when user cancels biometric
+        setIsCreatingPin(false);
         setShowPinModal(true);
       } else {
         Alert.alert('Authentication Failed', 'Please try again');

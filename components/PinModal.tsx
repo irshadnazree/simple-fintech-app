@@ -66,7 +66,7 @@ export default function PinModal({
     <Modal
       visible={visible}
       transparent
-      animationType='slide'
+      animationType='fade'
       onRequestClose={handleClose}
     >
       <View style={styles.modalOverlay}>
