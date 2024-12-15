@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Button from './components/Button';
@@ -6,6 +7,7 @@ import Navbar from './components/Navbar';
 export default function Registration() {
   const handleAddBiometric = async () => {
     // TODO: Implement biometric authentication
+    router.push('/transactions');
     console.log('Add biometric pressed');
   };
 
@@ -17,7 +19,11 @@ export default function Registration() {
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
-        <Navbar title='Registration' showBack={true} />
+        <Navbar
+          title='Registration'
+          showBack
+          onBackPress={() => router.push('/')}
+        />
         <View style={styles.content}>
           <View style={styles.titleContainer}>
             <Text style={[styles.text, styles.title]}>Add your biometric</Text>

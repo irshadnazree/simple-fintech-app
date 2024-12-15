@@ -8,23 +8,24 @@ import {
   View,
 } from 'react-native';
 
+interface NavbarProps {
+  title: string;
+  showBack?: boolean;
+  onBackPress?: () => void;
+}
+
 export default function Navbar({
   title,
   showBack = false,
-}: {
-  title: string;
-  showBack?: boolean;
-}) {
+  onBackPress,
+}: NavbarProps) {
   const navigation = useNavigation();
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         {showBack && (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={onBackPress}>
             <Ionicons name='arrow-back' size={24} color='black' />
           </TouchableOpacity>
         )}
