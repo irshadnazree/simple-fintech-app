@@ -27,16 +27,8 @@ export default function Index() {
             <Button
               title='Get Started'
               onPress={() => {
-                router.push('/registration');
+                router.push('/transactions');
               }}
-            />
-            <Button
-              title='Reset Data'
-              onPress={() => {
-                // Add your navigation or action here
-                console.log('Button pressed');
-              }}
-              color='lightGray'
             />
           </View>
         </View>

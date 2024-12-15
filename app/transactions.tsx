@@ -1,68 +1,252 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
+  Animated,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import ErrorPlaceholder from './components/ErrorPlaceholder';
 import Navbar from './components/Navbar';
+import { api, ApiError } from './services/api';
+import {
+  groupTransactionsByDate,
+  maskAmount,
+  maskMerchant,
+  revealAmount,
+  revealMerchant,
+  Transaction,
+} from './utils/transactionUtils';
 
 interface AccountBalance {
   available: number;
   pending: number;
+  currency: string;
 }
+
+const TransactionsListLoader = () => {
+  const animatedValue = new Animated.Value(0);
+
+  Animated.loop(
+    Animated.sequence([
+      Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animatedValue, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ])
+  ).start();
+
+  const opacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
+
+  return (
+    <View style={styles.skeletonTransactions}>
+      {[...Array(5)].map((_, index) => (
+        <View key={index} style={styles.skeletonTransaction}>
+          <Animated.View
+            style={[styles.skeletonTransactionItem, { opacity }]}
+          />
+          <Animated.View
+            style={[styles.skeletonTransactionCategory, { opacity }]}
+          />
+        </View>
+      ))}
+    </View>
+  );
+};
+
+const BalanceTextLoader = () => {
+  const animatedValue = new Animated.Value(0);
+
+  Animated.loop(
+    Animated.sequence([
+      Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animatedValue, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ])
+  ).start();
+
+  const opacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
+
+  return <Animated.View style={[styles.skeletonBalanceText, { opacity }]} />;
+};
 
 export default function TransactionsScreen() {
   const router = useRouter();
   const [isBalanceHidden, setIsBalanceHidden] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pin, setPin] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [balance, setBalance] = useState<AccountBalance>({
+    available: 0,
+    pending: 0,
+    currency: 'USD',
+  });
 
-  const balance: AccountBalance = {
-    available: 2459.32,
-    pending: 150.0,
+  // Group transactions by date
+  const groupedTransactions = groupTransactionsByDate(transactions);
+
+  // Fetch initial data
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch transactions and balance in parallel
+      const [transactionsResponse, balanceResponse] = await Promise.all([
+        api.getTransactions(),
+        api.getBalance(),
+      ]);
+
+      setTransactions(transactionsResponse.data.transactions);
+      setBalance(balanceResponse.data);
+    } catch (err) {
+      const message =
+        err instanceof ApiError ? err.message : 'An unexpected error occurred';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const transactions = useMemo(
-    () => generateMockTransactions(20),
-    [refreshKey]
-  );
-  const groupedTransactions = useMemo(
-    () => groupTransactionsByDate(transactions),
-    [transactions]
-  );
-
-  const toggleBalanceVisibility = () => {
-    setIsBalanceHidden(!isBalanceHidden);
-  };
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setRefreshKey((prev) => prev + 1);
-    setRefreshing(false);
+  // Load initial data
+  useEffect(() => {
+    fetchData();
   }, []);
 
-  return (
-    <View style={styles.container}>
-      <Navbar
-        title='Transactions'
-        showBack
-        onBackPress={() => router.push('/')}
-      />
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor='#999'
-          />
-        }
-      >
+  const verifyPin = (enteredPin: string) => {
+    // In a real app, you would verify against a stored PIN
+    // For demo purposes, we're using a hardcoded PIN: 1234
+    const correctPin = '1234';
+    if (enteredPin === correctPin) {
+      setIsBalanceHidden(!isBalanceHidden);
+      setShowPinModal(false);
+      setPin('');
+    } else {
+      Alert.alert('Error', 'Incorrect PIN. Please try again.');
+      setPin('');
+    }
+  };
+
+  async function toggleBalanceVisibility() {
+    // If we're going to hide the balance, do it immediately without authentication
+    if (!isBalanceHidden) {
+      setIsBalanceHidden(true);
+      return;
+    }
+
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+      if (!hasHardware || !isEnrolled) {
+        // Show PIN modal if biometric is not available
+        setShowPinModal(true);
+        return;
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to show balance',
+        fallbackLabel: 'Use PIN instead',
+      });
+
+      if (result.success) {
+        setIsBalanceHidden(false);
+      } else if (result.error === 'user_cancel') {
+        // Show PIN modal when user cancels biometric
+        setShowPinModal(true);
+      } else {
+        Alert.alert('Authentication Failed', 'Please try again');
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+      Alert.alert('Error', 'Failed to authenticate. Please try again later.');
+    }
+  }
+
+  const onRefresh = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      setError(null);
+
+      const response = await api.refreshTransactions();
+      setTransactions(response.data.transactions);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : 'Failed to refresh transactions';
+      setError(message);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <>
+          <View style={styles.balanceContainer}>
+            <View style={styles.balanceHeader}>
+              <Text style={styles.balanceLabel}>Available Balance</Text>
+              <TouchableOpacity
+                onPress={toggleBalanceVisibility}
+                style={[styles.eyeButton, styles.eyeButtonDisabled]}
+                disabled={true}
+              >
+                <Ionicons
+                  name={isBalanceHidden ? 'eye-off' : 'eye'}
+                  size={18}
+                  color='#ccc'
+                />
+              </TouchableOpacity>
+            </View>
+            <BalanceTextLoader />
+            <View style={styles.balanceSection}>
+              <Text style={styles.balanceLabel}>Pending</Text>
+              <BalanceTextLoader />
+            </View>
+          </View>
+          <TransactionsListLoader />
+        </>
+      );
+    }
+
+    if (error) {
+      return <ErrorPlaceholder message={error} onRetry={fetchData} />;
+    }
+
+    return (
+      <>
         <View style={styles.balanceContainer}>
           <View style={styles.balanceHeader}>
             <Text style={styles.balanceLabel}>Available Balance</Text>
@@ -117,7 +301,76 @@ export default function TransactionsScreen() {
             ))}
           </View>
         ))}
+      </>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <Navbar
+        title='Transactions'
+        showBack
+        onBackPress={() => router.push('/')}
+      />
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          !error ? (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor='#999'
+            />
+          ) : undefined
+        }
+      >
+        {renderContent()}
       </ScrollView>
+
+      <Modal
+        visible={showPinModal}
+        transparent
+        animationType='slide'
+        onRequestClose={() => {
+          setShowPinModal(false);
+          setPin('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Enter PIN</Text>
+            <TextInput
+              style={styles.pinInput}
+              value={pin}
+              onChangeText={setPin}
+              keyboardType='numeric'
+              secureTextEntry
+              maxLength={4}
+              placeholder='Enter 4-digit PIN'
+              placeholderTextColor='#999'
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowPinModal(false);
+                  setPin('');
+                }}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={() => verifyPin(pin)}
+              >
+                <Text style={[styles.buttonText, styles.confirmButtonText]}>
+                  Confirm
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -210,83 +463,91 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#f5f5f5',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Satoshi',
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  pinInput: {
+    width: '100%',
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  cancelButton: {
+    backgroundColor: '#f5f5f5',
+  },
+  confirmButton: {
+    backgroundColor: '#007AFF',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontFamily: 'Satoshi',
+    fontWeight: '600',
+    color: '#666',
+  },
+  confirmButtonText: {
+    color: 'white',
+  },
+  // Skeleton styles
+  skeletonTransactions: {
+    gap: 16,
+  },
+  skeletonTransaction: {
+    gap: 8,
+  },
+  skeletonTransactionItem: {
+    height: 24,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+    width: '80%',
+  },
+  skeletonTransactionCategory: {
+    height: 16,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+    width: '40%',
+  },
+  eyeButtonDisabled: {
+    backgroundColor: '#f0f0f0',
+  },
+  skeletonBalanceText: {
+    height: 32,
+    backgroundColor: '#E1E9EE',
+    borderRadius: 4,
+    width: '50%',
+    marginVertical: 4,
+  },
 });
-
-interface Transaction {
-  id: string;
-  amount: number;
-  date: Date;
-  description: string;
-  type: 'debit' | 'credit';
-  category?: string;
-  merchant?: string;
-}
-
-// function to group transactions by date
-function groupTransactionsByDate(transactions: Transaction[]): {
-  [date: string]: Transaction[];
-} {
-  return transactions.reduce((groups, transaction) => {
-    const date = transaction.date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(transaction);
-    return groups;
-  }, {} as { [date: string]: Transaction[] });
-}
-
-// Generate mock transaction data
-function generateMockTransactions(count: number = 20): Transaction[] {
-  const transactions: Transaction[] = [];
-  const merchants = ['Amazon', 'Uber', 'Starbucks', 'Spotify', 'Netflix'];
-  const categories = [
-    'Groceries',
-    'Entertainment',
-    'Transportation',
-    'Subscriptions',
-  ];
-
-  // Distribute transactions across these dates
-  for (let i = 0; i < count; i++) {
-    const randomDate = new Date(
-      Date.now() - Math.floor(Math.random() * 13) * 24 * 60 * 60 * 1000
-    );
-
-    transactions.push({
-      id: `txn_${Math.random().toString(36).substr(2, 9)}`,
-      amount: Math.round(Math.random() * 500),
-      date: randomDate,
-      description: `Payment to ${
-        merchants[Math.floor(Math.random() * merchants.length)]
-      }`,
-      type: Math.random() > 0.5 ? 'debit' : 'credit',
-      category: categories[Math.floor(Math.random() * categories.length)],
-      merchant: merchants[Math.floor(Math.random() * merchants.length)],
-    });
-  }
-
-  return transactions.sort((a, b) => b.date.getTime() - a.date.getTime());
-}
-
-// Mask sensitive transaction details
-function maskAmount(amount: number): string {
-  return `${'*'.repeat(amount.toString().length)}`;
-}
-
-function maskMerchant(merchant: string): string {
-  return `${merchant.slice(0, 3)}***`;
-}
-
-// Reveal amount after biometric authentication
-function revealAmount(amount: number): string {
-  return `$${amount.toFixed(2)}`;
-}
-
-function revealMerchant(merchant: string): string {
-  return merchant;
-}
