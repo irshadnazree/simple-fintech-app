@@ -1,6 +1,7 @@
 import { api, ApiError } from '@/api/api';
 import ErrorPlaceholder from '@/components/ErrorPlaceholder';
 import Navbar from '@/components/Navbar';
+import PinModal from '@/components/PinModal';
 import {
   groupTransactionsByDate,
   maskAmount,
@@ -16,12 +17,10 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Animated,
-  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -102,7 +101,7 @@ export default function TransactionsScreen() {
   const [isBalanceHidden, setIsBalanceHidden] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
-  const [pin, setPin] = useState('');
+  const [pinError, setPinError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -150,10 +149,9 @@ export default function TransactionsScreen() {
     if (enteredPin === correctPin) {
       setIsBalanceHidden(!isBalanceHidden);
       setShowPinModal(false);
-      setPin('');
+      setPinError(null);
     } else {
-      Alert.alert('Error', 'Incorrect PIN. Please try again.');
-      setPin('');
+      setPinError('Incorrect PIN. Please try again.');
     }
   };
 
@@ -333,50 +331,15 @@ export default function TransactionsScreen() {
         {renderContent()}
       </ScrollView>
 
-      <Modal
+      <PinModal
         visible={showPinModal}
-        transparent
-        animationType='slide'
-        onRequestClose={() => {
+        onClose={() => {
           setShowPinModal(false);
-          setPin('');
+          setPinError(null);
         }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Enter PIN</Text>
-            <TextInput
-              style={styles.pinInput}
-              value={pin}
-              onChangeText={setPin}
-              keyboardType='numeric'
-              secureTextEntry
-              maxLength={4}
-              placeholder='Enter 4-digit PIN'
-              placeholderTextColor='#999'
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowPinModal(false);
-                  setPin('');
-                }}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={() => verifyPin(pin)}
-              >
-                <Text style={[styles.buttonText, styles.confirmButtonText]}>
-                  Confirm
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onVerify={verifyPin}
+        error={pinError}
+      />
     </View>
   );
 }
@@ -469,63 +432,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#f5f5f5',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 24,
-    width: '80%',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontFamily: 'Satoshi',
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  pinInput: {
-    width: '100%',
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  modalButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#f5f5f5',
-  },
-  confirmButton: {
-    backgroundColor: '#007AFF',
-  },
-  buttonText: {
-    fontSize: 16,
-    fontFamily: 'Satoshi',
-    fontWeight: '600',
-    color: '#666',
-  },
-  confirmButtonText: {
-    color: 'white',
+  eyeButtonDisabled: {
+    backgroundColor: '#f0f0f0',
   },
   // Skeleton styles
   skeletonTransactions: {
@@ -545,9 +453,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#E1E9EE',
     borderRadius: 4,
     width: '40%',
-  },
-  eyeButtonDisabled: {
-    backgroundColor: '#f0f0f0',
   },
   skeletonBalanceText: {
     height: 32,
